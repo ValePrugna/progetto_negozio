@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}{{ period }} del {{ day.strftime('%d/%m/%Y') }} — Turni{% endblock %}
+{% block heading %}{{ period }} · {{ day.strftime('%d/%m/%Y') }}{% endblock %}
+{% block subtitle %}Seleziona uno o più volontari per questo slot.{% endblock %}
+{% block actions %}<a class="btn-ghost" href="{{ url_for('calendar.index', mese=day.strftime('%Y-%m')) }}">← Turni del mese</a>{% endblock %}
+{% block content %}
+<section class="card-custom calendar-form-card">
+  <h2>Volontari assegnati</h2>
+  <form method="POST" class="form-custom" novalidate>
+    {{ form.hidden_tag() }}
+    {% if volunteers %}
+    <fieldset class="volunteer-picker"><legend>Spunta i volontari presenti</legend>{{ form.volontari() }}</fieldset>
+    {% else %}<p class="alert-custom alert-info">Non ci sono volontari attivi. <a href="{{ url_for('calendar.volunteers') }}">Aggiungi un volontario</a> per coprire il turno.</p>{% endif %}
+    {% for error in form.volontari.errors %}<p class="form-error" role="alert">{{ error }}</p>{% endfor %}
+    <p class="form-hint">Almeno un nome selezionato: slot verde. Nessun nome selezionato: slot rosso.</p>
+    <div class="calendar-actions"><button class="btn-brand" type="submit">Salva assegnazioni</button><a class="btn-ghost" href="{{ url_for('calendar.index', mese=day.strftime('%Y-%m')) }}">Annulla</a></div>
+  </form>
+  {% if saved and saved.volontari %}
+  <form method="POST" class="calendar-delete" data-confirm="Rimuovere tutti i volontari da questo slot?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn-danger-soft" type="submit">Libera slot</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

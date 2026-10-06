@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Modifica' if entry else 'Nuovo' }} evento — Gestionale Negozio{% endblock %}
+{% block heading %}{{ 'Modifica' if entry else 'Nuovo' }} evento{% endblock %}
+{% block subtitle %}Gli eventi sono separati dai turni e non modificano la copertura degli slot.{% endblock %}
+{% block actions %}<a class="btn-ghost" href="{{ url_for('calendar.events', mese=form.giorno.data.strftime('%Y-%m') if form.giorno.data else None) }}">← Eventi del mese</a>{% endblock %}
+{% block content %}
+<section class="card-custom calendar-form-card">
+  <form method="POST" class="form-custom" novalidate>{{ form.hidden_tag() }}
+    {% for field in [form.titolo, form.giorno, form.ultimo_giorno, form.luogo, form.note] %}<div class="form-group">{{ field.label }}{{ field() }}{% for error in field.errors %}<p class="form-error" role="alert">{{ error }}</p>{% endfor %}</div>{% endfor %}
+    <p class="form-hint">Per un evento di un solo giorno lascia vuoto “Ultimo giorno”.</p>
+    <div class="calendar-actions"><button class="btn-brand" type="submit">Salva evento</button><a class="btn-ghost" href="{{ url_for('calendar.events') }}">Annulla</a></div>
+  </form>
+  {% if entry %}<form method="POST" action="{{ url_for('calendar.delete_event', entry_id=entry.id) }}" class="calendar-delete" data-confirm="Eliminare questo evento?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn-danger-soft" type="submit">Elimina evento</button>
+  </form>{% endif %}
+</section>
+{% endblock %}

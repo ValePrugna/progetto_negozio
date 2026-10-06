@@ -1,27 +1,28 @@
 Gestionale negozio — schema aggiornato
 
-Admin
-  username: String (PK)
-  password: hash
-  Ruolo applicativo: capo; accesso a inventario, volontari e calendario.
+Admin: username (PK), password hash; account del capo.
+Prodotto: id (PK), nome, marca, prezzo, quantita, descrizione, immagine.
+Volontario: id (PK), nome, attivo; nessun account di accesso.
 
-Prodotto
+TurnoSlot
   id: Integer (PK)
-  nome, marca, prezzo, quantita, descrizione, nome_file, file_data
+  giorno: Date
+  fascia: mattina | pomeriggio
+  Unique(giorno, fascia): massimo due slot distinti al giorno.
 
-Volontario
-  id: Integer (PK)
-  nome: String
-  attivo: Boolean
-  Non dispone di credenziali di accesso.
-
-Impegno
-  id: Integer (PK)
-  tipo: turno | evento
-  titolo, inizio, fine, luogo, note
-  volontario_id: Integer (FK -> Volontario.id, nullable per eventi)
+slot_volontari
+  slot_id: FK -> turni_slot.id
+  volontario_id: FK -> volontari.id
+  PK(slot_id, volontario_id): un volontario non è duplicato nello slot.
 
 Relazioni
-  Volontario 1 ---- 0..* Impegno (solo turni)
-  Un evento non ha volontario associato.
-  fine > inizio; turni dello stesso volontario non sovrapposti.
+  TurnoSlot * ---- * Volontario
+  Slot senza volontari: rosso. Slot con almeno un volontario: verde.
+
+Impegno
+  Schema precedente conservato; tipo evento usato dalla pagina Eventi del mese.
+  I turni precedenti restano come archivio, con note e orari originali.
+
+TurnoMigrato
+  impegno_id: FK/PK -> impegni_calendario.id
+  Impedisce di riconvertire i turni precedenti dopo modifiche agli slot.

@@ -4,12 +4,15 @@ from zoneinfo import ZoneInfo
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import login_required
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 from app.extensions import db
-from app.models import Impegno, ImpegnoForm, Volontario, VolontarioForm
+from app.models import EventoForm, Impegno, SlotForm, TurnoSlot, Volontario, VolontarioForm
 
 bp = Blueprint('calendar', __name__, url_prefix='/calendario')
 MONTHS = ('Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
           'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre')
+PERIODS = (('mattina', 'Mattina'), ('pomeriggio', 'Pomeriggio'))
 
 
 def today():
@@ -26,112 +29,140 @@ def month_value(raw):
         abort(400, description='Mese non valido.')
 
 
+def day_value(raw):
+    try:
+        value = date.fromisoformat(raw)
+        if not 2000 <= value.year <= 2100:
+            raise ValueError
+        return value
+    except (TypeError, ValueError):
+        abort(400, description='Giorno non valido.')
+
+
+def month_context():
+    month = month_value(request.args.get('mese', today().strftime('%Y-%m')))
+    next_month = (month.replace(day=28) + timedelta(days=4)).replace(day=1)
+    previous = (month - timedelta(days=1)).strftime('%Y-%m') if month != date(2000, 1, 1) else None
+    following = next_month.strftime('%Y-%m') if next_month.year <= 2100 else None
+    return {'month': month, 'next_month': next_month,
+            'label': f'{MONTHS[month.month-1]} {month.year}', 'previous': previous, 'following': following}
+
+
 @bp.route('')
 @bp.route('/')
 @login_required
 def index():
-    current = today()
-    month = month_value(request.args.get('mese', current.strftime('%Y-%m')))
+    context = month_context()
+    month = context['month']
     weeks = month_calendar.Calendar(firstweekday=0).monthdatescalendar(month.year, month.month)
-    start = datetime.combine(weeks[0][0], time.min)
-    end = datetime.combine(weeks[-1][-1] + timedelta(days=1), time.min)
-    query = Impegno.query.filter(Impegno.inizio < end, Impegno.fine > start)
-    kind = request.args.get('tipo', '')
-    if kind not in ('', 'turno', 'evento'):
-        abort(400)
-    if kind:
-        query = query.filter_by(tipo=kind)
-    volunteer = request.args.get('volontario', '')
-    if volunteer:
-        try:
-            volunteer_id = int(volunteer)
-        except ValueError:
-            abort(400)
-        db.get_or_404(Volontario, volunteer_id)
-        query = query.filter_by(volontario_id=volunteer_id)
-    entries = query.order_by(Impegno.inizio, Impegno.id).all()
-    by_day = {}
-    for week in weeks:
-        for day in week:
-            day_start = datetime.combine(day, time.min)
-            day_end = day_start + timedelta(days=1)
-            by_day[day] = [entry for entry in entries if entry.inizio < day_end and entry.fine > day_start]
-    previous = (month - timedelta(days=1)).strftime('%Y-%m') if month.year > 2000 or month.month > 1 else None
-    following_date = month.replace(day=28) + timedelta(days=4)
-    following = following_date.strftime('%Y-%m') if following_date.year <= 2100 else None
-    return render_template('calendar.html', month=month, label=f'{MONTHS[month.month-1]} {month.year}',
-                           weeks=weeks, by_day=by_day, today=current, previous=previous,
-                           following=following, kind=kind, volunteer=volunteer,
-                           volunteers=Volontario.query.order_by(Volontario.nome).all(),
-                           entries=[e for e in entries if e.inizio < datetime.combine(following_date.replace(day=1), time.min)
-                                    and e.fine > datetime.combine(month, time.min)])
+    slots = TurnoSlot.query.options(selectinload(TurnoSlot.volontari)).filter(TurnoSlot.giorno >= month,
+                                    TurnoSlot.giorno < context['next_month']).all()
+    slot_map = {(slot.giorno, slot.fascia): slot for slot in slots}
+    covered = sum(bool(slot.volontari) for slot in slots)
+    total = month_calendar.monthrange(month.year, month.month)[1] * 2
+    return render_template('calendar.html', **context, weeks=weeks, slot_map=slot_map,
+                           periods=PERIODS, today=today(), covered=covered, total=total)
 
 
-def save_entry(entry=None):
-    form = ImpegnoForm(obj=entry)
-    volunteers = Volontario.query.filter_by(attivo=True).order_by(Volontario.nome).all()
-    if entry and entry.volontario and entry.volontario not in volunteers:
-        volunteers.append(entry.volontario)
-    form.volontario_id.choices = [(0, '— Nessun volontario —')] + [(v.id, v.nome) for v in volunteers]
-    if request.method == 'GET' and entry is None:
-        try:
-            day = date.fromisoformat(request.args.get('giorno', today().isoformat()))
-            if not 2000 <= day.year <= 2100:
-                raise ValueError
-        except ValueError:
-            abort(400)
-        form.inizio.data = datetime.combine(day, time(9))
-        form.fine.data = datetime.combine(day, time(13))
-        form.tipo.data = request.args.get('tipo', 'turno')
+@bp.route('/slot/<giorno>/<fascia>', methods=['GET', 'POST'])
+@login_required
+def slot(giorno, fascia):
+    day = day_value(giorno)
+    if fascia not in dict(PERIODS):
+        abort(404)
+    query = TurnoSlot.query.filter_by(giorno=day, fascia=fascia)
+    saved = (query.with_for_update() if request.method == 'POST' else query).first()
+    existing_ids = {v.id for v in saved.volontari} if saved else set()
+    volunteers = Volontario.query.filter(db.or_(Volontario.attivo.is_(True),
+                                               Volontario.id.in_(existing_ids))).order_by(Volontario.nome).all()
+    form = SlotForm()
+    form.volontari.choices = [(v.id, v.nome + (' (non attivo)' if not v.attivo else '')) for v in volunteers]
+    if request.method == 'GET':
+        form.volontari.data = sorted(existing_ids)
     if form.validate_on_submit():
-        valid = True
-        if form.tipo.data == 'turno':
-            selected = db.session.execute(db.select(Volontario).where(Volontario.id == form.volontario_id.data).with_for_update().execution_options(populate_existing=True)).scalar_one_or_none() if form.volontario_id.data else None
-            if not selected or (not selected.attivo and (entry is None or entry.volontario_id != selected.id)):
-                form.volontario_id.errors.append('Scegli un volontario attivo.')
-                valid = False
-            if selected:
-                conflicts = Impegno.query.filter_by(tipo='turno', volontario_id=selected.id).filter(
-                    Impegno.inizio < form.fine.data, Impegno.fine > form.inizio.data)
-                if entry:
-                    conflicts = conflicts.filter(Impegno.id != entry.id)
-                if conflicts.with_for_update().first():
-                    form.volontario_id.errors.append('Il volontario ha già un turno in questo intervallo.')
-                    valid = False
-        if valid:
-            if entry is None:
-                entry = Impegno()
-                db.session.add(entry)
-            for name in ('tipo', 'titolo', 'inizio', 'fine', 'luogo', 'note'):
-                setattr(entry, name, getattr(form, name).data or '')
-            entry.volontario_id = form.volontario_id.data if form.tipo.data == 'turno' else None
-            db.session.commit()
-            flash('Impegno salvato.', 'success')
-            return redirect(url_for('calendar.index', mese=entry.inizio.strftime('%Y-%m')))
-    return render_template('calendar_form.html', form=form, entry=entry)
+        ids = sorted(set(form.volontari.data))
+        selected = db.session.execute(db.select(Volontario).where(Volontario.id.in_(ids))
+                                      .order_by(Volontario.id).with_for_update()
+                                      .execution_options(populate_existing=True)).scalars().all() if ids else []
+        if any(not v.attivo and v.id not in existing_ids for v in selected):
+            form.volontari.errors.append('Un volontario è stato disattivato. Ricarica la pagina.')
+        else:
+            if saved is None:
+                saved = TurnoSlot(giorno=day, fascia=fascia)
+                db.session.add(saved)
+            saved.volontari = selected
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                flash('Questo slot è stato aggiornato nel frattempo. Controlla le assegnazioni e riprova.', 'info')
+                return redirect(url_for('calendar.slot', giorno=giorno, fascia=fascia))
+            flash('Assegnazioni salvate.' if selected else 'Slot liberato: nessun volontario assegnato.', 'success')
+            return redirect(url_for('calendar.index', mese=day.strftime('%Y-%m')))
+    return render_template('slot_form.html', form=form, day=day, period=dict(PERIODS)[fascia],
+                           saved=saved, volunteers=volunteers)
 
 
-@bp.route('/nuovo', methods=['GET', 'POST'])
+@bp.route('/eventi')
 @login_required
-def new():
-    return save_entry()
+def events():
+    context = month_context()
+    entries = Impegno.query.filter_by(tipo='evento').filter(
+        Impegno.inizio < datetime.combine(context['next_month'], time.min),
+        Impegno.fine > datetime.combine(context['month'], time.min)).order_by(Impegno.inizio, Impegno.id).all()
+    return render_template('events.html', **context, entries=entries, timedelta=timedelta)
 
 
-@bp.route('/<int:entry_id>/modifica', methods=['GET', 'POST'])
+def save_event(entry=None):
+    if entry and entry.tipo != 'evento':
+        abort(404)
+    form = EventoForm(obj=entry)
+    if request.method == 'GET':
+        if entry:
+            form.giorno.data = entry.inizio.date()
+            last = (entry.fine - timedelta(microseconds=1)).date()
+            form.ultimo_giorno.data = last if last != form.giorno.data else None
+        else:
+            form.giorno.data = day_value(request.args.get('giorno', today().isoformat()))
+    if form.validate_on_submit():
+        if entry is None:
+            entry = Impegno(tipo='evento')
+            db.session.add(entry)
+        entry.titolo = form.titolo.data
+        entry.inizio = datetime.combine(form.giorno.data, time.min)
+        entry.fine = datetime.combine((form.ultimo_giorno.data or form.giorno.data) + timedelta(days=1), time.min)
+        entry.volontario_id = None
+        entry.luogo = form.luogo.data or ''
+        entry.note = form.note.data or ''
+        db.session.commit()
+        flash('Evento salvato.', 'success')
+        return redirect(url_for('calendar.events', mese=entry.inizio.strftime('%Y-%m')))
+    return render_template('event_form.html', form=form, entry=entry)
+
+
+@bp.route('/eventi/nuovo', methods=['GET', 'POST'])
 @login_required
-def edit(entry_id):
-    return save_entry(db.get_or_404(Impegno, entry_id))
+def new_event():
+    return save_event()
 
 
-@bp.route('/<int:entry_id>/elimina', methods=['POST'])
+@bp.route('/eventi/<int:entry_id>/modifica', methods=['GET', 'POST'])
 @login_required
-def delete(entry_id):
+def edit_event(entry_id):
+    return save_event(db.get_or_404(Impegno, entry_id))
+
+
+@bp.route('/eventi/<int:entry_id>/elimina', methods=['POST'])
+@login_required
+def delete_event(entry_id):
     entry = db.get_or_404(Impegno, entry_id)
+    if entry.tipo != 'evento':
+        abort(404)
     month = entry.inizio.strftime('%Y-%m')
     db.session.delete(entry)
     db.session.commit()
-    flash('Impegno eliminato.', 'success')
-    return redirect(url_for('calendar.index', mese=month))
+    flash('Evento eliminato.', 'success')
+    return redirect(url_for('calendar.events', mese=month))
 
 
 @bp.route('/volontari', methods=['GET', 'POST'])
@@ -157,6 +188,6 @@ def edit_volunteer(volunteer_id):
         volunteer.nome = form.nome.data
         volunteer.attivo = form.attivo.data
         db.session.commit()
-        flash('Volontario aggiornato. I turni esistenti sono conservati.', 'success')
+        flash('Volontario aggiornato. Le assegnazioni esistenti sono conservate.', 'success')
         return redirect(url_for('calendar.volunteers'))
     return render_template('volunteer_form.html', form=form, volunteer=volunteer)

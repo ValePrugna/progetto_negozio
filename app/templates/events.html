@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Eventi del mese — Gestionale Negozio{% endblock %}
+{% block heading %}Eventi del mese{% endblock %}
+{% block subtitle %}Appunta cosa succede nel mese: iniziative, incontri e giornate particolari.{% endblock %}
+{% block actions %}<a class="btn-ghost" href="{{ url_for('calendar.index', mese=month.strftime('%Y-%m')) }}">← Turni dei volontari</a><a class="btn-brand" href="{{ url_for('calendar.new_event', giorno=month.isoformat()) }}">+ Aggiungi evento</a>{% endblock %}
+{% block content %}
+{% set month_endpoint = 'calendar.events' %}{% include 'month_nav.html' %}
+<section class="card-custom calendar-agenda event-agenda">
+  <div class="card-header-custom"><h2>{{ label }}</h2><span>{{ entries|length }} eventi</span></div>
+  {% for entry in entries %}
+  <article class="agenda-entry">
+    <div><span class="event-date">{{ entry.inizio.strftime('%d/%m/%Y') }}{% set last_day = (entry.fine - timedelta(microseconds=1)).date() %}{% if last_day != entry.inizio.date() %} → {{ last_day.strftime('%d/%m/%Y') }}{% endif %}</span>
+      <h3>{{ entry.titolo }}</h3>{% if entry.luogo %}<p><strong>Luogo:</strong> {{ entry.luogo }}</p>{% endif %}{% if entry.note %}<p class="entry-notes">{{ entry.note }}</p>{% endif %}
+    </div>
+    <a class="btn-ghost" href="{{ url_for('calendar.edit_event', entry_id=entry.id) }}">Modifica</a>
+  </article>
+  {% else %}<div class="empty-state"><span class="empty-icon">📝</span><h4>Nessun evento per {{ label }}</h4><p>Annota qui le attività e le occasioni particolari del mese.</p><a class="btn-brand" href="{{ url_for('calendar.new_event', giorno=month.isoformat()) }}">+ Aggiungi evento</a></div>{% endfor %}
+</section>
+{% endblock %}

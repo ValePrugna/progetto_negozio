@@ -1,0 +1,12 @@
+<section class="card-custom calendar-toolbar" aria-label="Selezione mese">
+  <div class="calendar-month-nav">
+    {% if previous %}<a class="btn-ghost" aria-label="Mese precedente" href="{{ url_for(month_endpoint, mese=previous) }}">←</a>{% endif %}
+    <h2>{{ label }}</h2>
+    {% if following %}<a class="btn-ghost" aria-label="Mese successivo" href="{{ url_for(month_endpoint, mese=following) }}">→</a>{% endif %}
+    <a class="btn-ghost" href="{{ url_for(month_endpoint) }}">Mese attuale</a>
+  </div>
+  <form method="GET" class="form-custom calendar-filters">
+    <div><label for="mese">Vai al mese</label><input id="mese" type="month" name="mese" value="{{ month.strftime('%Y-%m') }}" min="2000-01" max="2100-12"></div>
+    <button type="submit" class="btn-ghost">Mostra</button>
+  </form>
+</section>

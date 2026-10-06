@@ -97,7 +97,10 @@ def create_app(test_config=None):
     def init_db():
         """Create missing tables; never reset existing data."""
         db.create_all()
+        from app.slot_migration import migrate_legacy_shifts
+        count = migrate_legacy_shifts()
         click.echo('Tabelle create; dati esistenti conservati.')
+        click.echo(f'Turni precedenti convertiti negli slot: {count}.')
 
     @app.cli.command('create-admin')
     @click.option('--username', prompt='Username')

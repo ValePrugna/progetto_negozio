@@ -749,3 +749,50 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  .calendar-legend { gap:8px; }
  .agenda-entry { flex-wrap:wrap; }
 }
+
+/* Due slot fissi al giorno, indipendenti dagli eventi. */
+.slot-legend { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:20px 0; }
+.coverage-badge { padding:8px 14px; border-radius:999px; font-size:13px; font-weight:600; }
+.coverage-badge.covered { color:#166534; background:#dcfce7; }
+.coverage-badge.uncovered { color:#991b1b; background:#fee2e2; }
+.slot-legend-hint { color:var(--text-secondary); font-size:13px; }
+.shift-calendar { overflow:hidden; }
+.shift-calendar .calendar-grid { min-width:0; }
+.shift-day { padding:10px; min-height:250px; }
+.shift-day-heading { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+.shift-day-heading .calendar-date { margin:0; text-decoration:none; }
+.mobile-weekday { display:none; }
+.today-label { color:var(--brand-primary); font-size:11px; font-weight:700; }
+.shift-slot { display:block; min-height:98px; border:1px solid; border-radius:9px; padding:10px; margin:8px 0; text-decoration:none; transition:background .15s; overflow-wrap:anywhere; }
+.shift-slot.covered { background:#dcfce7; border-color:#86efac; color:#14532d; }
+.shift-slot.uncovered { background:#fee2e2; border-color:#fca5a5; color:#7f1d1d; }
+.shift-slot.covered:hover { background:#bbf7d0; }
+.shift-slot.uncovered:hover { background:#fecaca; }
+.shift-slot-heading { display:flex; align-items:center; justify-content:space-between; gap:3px; font-size:13px; font-weight:700; }
+.slot-status { display:block; font-size:11px; font-weight:600; margin:5px 0; }
+.slot-empty { display:block; font-size:12px; }
+.assigned-volunteers { list-style:none; padding:0; margin:4px 0 0; font-size:12px; }
+.assigned-volunteers li + li { margin-top:4px; }
+.volunteer-picker { border:0; padding:0; margin:20px 0; }
+.volunteer-picker legend { font-size:14px; color:var(--text-secondary); margin-bottom:12px; }
+.volunteer-picker ul { list-style:none; padding:0; margin:0; }
+.volunteer-picker li { padding:14px; margin-bottom:8px; border:1px solid var(--border-color); border-radius:8px; display:flex; gap:10px; align-items:center; }
+.volunteer-picker label { margin:0; cursor:pointer; flex:1; }
+.volunteer-picker input[type=checkbox] { width:20px; height:20px; flex-shrink:0; accent-color:var(--brand-primary); }
+.event-date { display:inline-block; color:#5b21b6; font-size:13px; font-weight:600; background:#f5f3ff; padding:6px 10px; border-radius:7px; }
+.event-agenda { margin-top:24px; }
+@media (min-width:769px) and (max-width:1150px) {
+ .shift-day { padding:5px; }
+ .shift-slot { padding:7px; }
+ .shift-slot-heading { font-size:11px; }
+}
+@media (max-width:768px) {
+ .shift-calendar .calendar-weekdays { display:none; }
+ .shift-calendar .calendar-week { display:block; }
+ .shift-calendar .outside-month { display:none; }
+ .shift-day { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; min-height:0; padding:14px; border-right:0; }
+ .shift-day-heading { grid-column:1/-1; margin-bottom:0; }
+ .mobile-weekday { display:inline; font-size:14px; font-weight:600; }
+ .shift-slot { margin:0; min-height:105px; }
+ .calendar-month-nav h2 { min-width:0; }
+}

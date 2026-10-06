@@ -2,7 +2,7 @@ from app.extensions import db, login_manager
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import (StringField, IntegerField, TextAreaField, SubmitField,
-                     PasswordField, FloatField, SelectField, BooleanField, DateTimeLocalField)
+                     PasswordField, FloatField, BooleanField, DateField, SelectMultipleField)
 from wtforms.validators import DataRequired, InputRequired, Length, NumberRange, ValidationError, Optional
 import math
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -111,38 +111,55 @@ class VolontarioForm(FlaskForm):
     submit = SubmitField('Salva volontario')
 
 
-class ImpegnoForm(FlaskForm):
-    tipo = SelectField('Tipo', choices=[('turno', 'Turno volontario'), ('evento', 'Evento particolare')])
-    titolo = StringField('Titolo', validators=[DataRequired(), Length(max=160)],
+slot_volontari = db.Table(
+    'slot_volontari',
+    db.Column('slot_id', db.Integer, db.ForeignKey('turni_slot.id'), primary_key=True),
+    db.Column('volontario_id', db.Integer, db.ForeignKey('volontari.id'), primary_key=True),
+)
+
+
+class TurnoSlot(db.Model):
+    __tablename__ = 'turni_slot'
+    id = db.Column(db.Integer, primary_key=True)
+    giorno = db.Column(db.Date, nullable=False, index=True)
+    fascia = db.Column(db.String(12), nullable=False)
+    volontari = db.relationship('Volontario', secondary=slot_volontari, order_by='Volontario.nome')
+    __table_args__ = (
+        db.UniqueConstraint('giorno', 'fascia', name='slot_giorno_fascia_unico'),
+        db.CheckConstraint("fascia IN ('mattina', 'pomeriggio')", name='slot_fascia_valida'),
+    )
+
+
+class TurnoMigrato(db.Model):
+    __tablename__ = 'turni_migrati'
+    impegno_id = db.Column(db.Integer, db.ForeignKey('impegni_calendario.id'), primary_key=True)
+
+
+from wtforms.widgets import ListWidget, CheckboxInput
+
+
+class SlotForm(FlaskForm):
+    volontari = SelectMultipleField('Volontari assegnati', coerce=int,
+                                   widget=ListWidget(prefix_label=False), option_widget=CheckboxInput())
+    submit = SubmitField('Salva assegnazioni')
+
+
+class EventoForm(FlaskForm):
+    titolo = StringField('Cosa succede?', validators=[DataRequired(), Length(max=160)],
                          filters=[lambda s: s.strip() if s else s])
-    volontario_id = SelectField('Volontario (solo per i turni)', coerce=int)
-    inizio = DateTimeLocalField('Inizio', format='%Y-%m-%dT%H:%M', validators=[InputRequired()])
-    fine = DateTimeLocalField('Fine', format='%Y-%m-%dT%H:%M', validators=[InputRequired()])
-    luogo = StringField('Luogo', validators=[Optional(), Length(max=160)])
-    note = TextAreaField('Note', validators=[Optional(), Length(max=3000)])
-    submit = SubmitField('Salva')
+    giorno = DateField('Giorno', validators=[InputRequired()])
+    ultimo_giorno = DateField('Ultimo giorno (facoltativo)', validators=[Optional()])
+    luogo = StringField('Luogo (facoltativo)', validators=[Optional(), Length(max=160)])
+    note = TextAreaField('Dettagli (facoltativi)', validators=[Optional(), Length(max=3000)])
+    submit = SubmitField('Salva evento')
 
-    def validate_inizio(self, field):
-        self._validate_local_time(field)
+    def validate_giorno(self, field):
+        if field.data and not 2000 <= field.data.year <= 2100:
+            raise ValidationError('Scegli una data tra il 2000 e il 2100.')
 
-    @staticmethod
-    def _validate_local_time(field):
+    def validate_ultimo_giorno(self, field):
         if field.data:
             if not 2000 <= field.data.year <= 2100:
                 raise ValidationError('Scegli una data tra il 2000 e il 2100.')
-            from datetime import timezone
-            from zoneinfo import ZoneInfo
-            local = field.data.replace(tzinfo=ZoneInfo('Europe/Rome'))
-            roundtrip = local.astimezone(timezone.utc).astimezone(local.tzinfo).replace(tzinfo=None)
-            if roundtrip != field.data:
-                raise ValidationError('Questo orario non esiste a Roma a causa del cambio dell’ora.')
-            if local.utcoffset() != local.replace(fold=1).utcoffset():
-                raise ValidationError('Questo orario è ambiguo per il cambio dell’ora. Scegli un altro orario.')
-
-    def validate_fine(self, field):
-        self._validate_local_time(field)
-        if self.inizio.data and field.data and field.data <= self.inizio.data:
-            raise ValidationError('La fine deve essere successiva all’inizio.')
-        for value in (self.inizio.data, field.data):
-            if value and not 2000 <= value.year <= 2100:
-                raise ValidationError('Scegli una data tra il 2000 e il 2100.')
+            if self.giorno.data and field.data < self.giorno.data:
+                raise ValidationError('L’ultimo giorno non può precedere il primo.')

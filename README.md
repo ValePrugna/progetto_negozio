@@ -30,23 +30,58 @@ la chiave di sessione locale e `.env` sono esclusi da Git. La chiave locale vien
 una sola volta, con permessi riservati, così le sessioni restano valide dopo il riavvio.
 La modalità sviluppo è il valore predefinito; per produzione impostare esplicitamente `APP_ENV=production`.
 
-## Calendario
+## Turni: due slot per giorno
 
-Dal menu **Calendario e turni**:
+![Calendario con slot mattina e pomeriggio](docs/calendario-turni.png)
 
-1. Apri **Volontari** e aggiungi nome e cognome. Puoi rinominare o disattivare un volontario; lo storico resta disponibile.
-2. Clicca su un giorno o su **Nuovo impegno**.
-3. Scegli **Turno volontario** o **Evento particolare**, titolo, inizio/fine, luogo e note.
-4. Per un turno seleziona un volontario attivo. Per un evento il volontario viene ignorato.
-5. Clicca su un impegno per modificarlo o eliminarlo, con conferma.
+Dal menu **Turni dei volontari** apri il mese che vuoi organizzare.
+Ogni giorno ha esattamente due slot: **Mattina** e **Pomeriggio**.
+Non si inseriscono titoli o orari per i turni.
 
-Vista mensile con mese precedente/successivo, pulsante Oggi, filtro per tipo e volontario
-ed agenda leggibile anche da telefono. Gli impegni su più giorni appaiono su ciascun giorno
-coinvolto; una fine a mezzanotte non occupa il giorno successivo. Gli intervalli sono
-`[inizio, fine)`: due turni adiacenti sono ammessi, due sovrapposti per lo stesso volontario no.
-La verifica blocca il record del volontario durante il salvataggio su MySQL/TiDB.
-Date supportate: 2000–2100. Gli orari sono locali di **Europe/Rome**; gli orari inesistenti
-o ambigui durante il cambio dell’ora vengono rifiutati per evitare assegnazioni equivoche.
+- **Rosso / Libero**: nessun volontario assegnato.
+- **Verde / Coperto**: uno o più volontari assegnati; i nomi appaiono nello slot.
+
+Clicca sullo slot, spunta i volontari e premi **Salva assegnazioni**.
+Puoi assegnare più persone allo stesso slot e la stessa persona a mattina e pomeriggio.
+Per rimuovere tutti i nomi usa **Libera slot**, con conferma. Il riquadro tornerà rosso.
+Il numero di slot non cambia e non è possibile creare un terzo turno.
+Su telefono ogni giorno mostra i due slot affiancati, senza scorrimento orizzontale.
+
+In **Volontari** puoi aggiungere, rinominare o disattivare un nome.
+Un volontario disattivato resta nelle assegnazioni esistenti ma non può essere aggiunto
+agli altri slot. Non ha un account di accesso. Sono supportate le date dal 2000 al 2100.
+
+## Eventi del mese
+
+Gli eventi hanno una pagina separata, **Eventi del mese**: seleziona il mese e premi
+**Aggiungi evento**. Inserisci cosa succede, giorno, eventuale ultimo giorno, luogo e dettagli.
+L’ultimo giorno è incluso; se lo lasci vuoto l’evento dura un solo giorno.
+Puoi modificare o eliminare ogni evento. Gli eventi non occupano slot e non cambiano
+i colori del calendario dei turni.
+
+## Aggiornare la prima versione su Windows
+
+1. Ferma il sito con **Ctrl+C** e fai una copia della cartella `instance` come backup.
+2. Scarica il nuovo ZIP dal ramo `codex/calendario-volontari-20261006`.
+3. Copia le cartelle `app` e `static` dalla nuova versione nella cartella già usata,
+   sostituendo i file. Puoi aggiornare anche `tests` e `README.md`.
+   Conserva `.venv`, `instance` e l’eventuale `.env`: contengono ambiente, account e dati.
+4. Nello stesso terminale, con `(.venv)` attivo, esegui:
+
+```bat
+python -m flask --app run init-db
+python -m flask --app run run --debug
+```
+
+`init-db` aggiunge le tabelle degli slot e converte i vecchi turni. Per questa conversione,
+le porzioni del vecchio intervallo prima delle 12:00 vengono assegnate alla mattina,
+quelle dopo le 12:00 al pomeriggio. Un vecchio turno che attraversa mezzogiorno copre entrambi.
+Gli slot nuovi non hanno orari da scegliere: questa regola serve solo a recuperare i dati precedenti.
+Controlla le assegnazioni importate e correggile secondo le necessità del negozio.
+I vecchi record, con titoli, note e orari, restano nel database e gli eventi restano invariati.
+La conversione si esegue una sola volta per ogni vecchio turno: ripetere `init-db`
+non ripristina volontari rimossi dagli slot né duplica assegnazioni.
+Non occorre ricreare l’account del capo.
 
 ## TiDB esistente
 
@@ -58,8 +93,8 @@ Le password con caratteri speciali vengono gestite senza concatenare stringhe UR
 `DATABASE_URL`, se presente, ha precedenza: non impostarla se vuoi usare le variabili TiDB.
 
 Con backup disponibile, esegui `python -m flask --app run init-db` sul database selezionato:
-crea solo le tabelle mancanti `volontari` e `impegni_calendario` e conserva le tabelle
-`admin` e `prodotti` esistenti. Il comando **non** aggiorna lo schema di tabelle già presenti:
+crea le tabelle mancanti, incluse `turni_slot`, `slot_volontari` e `turni_migrati`,
+esegue la conversione dei turni descritta sopra e conserva `admin`, `prodotti` ed eventi. Il comando **non** aggiorna lo schema di tabelle già presenti:
 per cambiamenti futuri alle colonne serviranno migrazioni. Il server non crea tabelle
 all’avvio e non nasconde gli errori di connessione. Gli errori database nelle richieste
 mostrano una pagina 503 senza esporre credenziali.
@@ -94,8 +129,10 @@ python -m unittest discover -s tests -v
 ```
 
 I test esercitano autenticazione reale, CSRF, logout, inventario, upload PNG/MIME,
-file e numeri non validi, creazione/modifica/eliminazione di turni ed eventi,
-sovrapposizioni, volontari disattivati, filtri, cambio dell’ora e limiti del mese.
+file e numeri non validi, due soli slot giornalieri, colori rosso/verde,
+assegnazioni multiple e rimozione dei volontari, eventi separati, volontari disattivati,
+limiti del mese e conversione ripetibile dei turni precedenti.
+La suite viene eseguita anche senza fusi orari di sistema, usando `tzdata` come su Windows.
 Non contattano TiDB né modificano dati reali.
 
 ## Correzioni principali
