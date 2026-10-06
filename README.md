@@ -5,7 +5,9 @@ Il progetto importato da `progetto negozio.zip` è indipendente dall’archivio 
 
 ## Avvio in sviluppo
 
-Richiede Python 3.12. Dalla cartella del progetto:
+Python 3.12 è la versione verificata nell’ambiente cloud. La dipendenza `tzdata`
+fornisce i fusi orari anche su Windows, dove non è presente il database IANA di sistema.
+Dalla cartella del progetto:
 
 ```sh
 python -m venv .venv
