@@ -63,12 +63,12 @@
         <div class="stat-card">
           <div class="stat-icon" style="background:#f0fdf4;">✅</div>
           <div class="stat-value">{{ prodotti|selectattr('quantita','gt',0)|list|length }}</div>
-          <div class="stat-label">Disponibili</div>
+          <div class="stat-label">Con scorta registrata</div>
         </div>
         <div class="stat-card">
           <div class="stat-icon" style="background:#fef2f2;">⚠️</div>
           <div class="stat-value">{{ prodotti|selectattr('quantita','eq',0)|list|length }}</div>
-          <div class="stat-label">Esauriti</div>
+          <div class="stat-label">Quantità a zero</div>
         </div>
         <div class="stat-card">
           <div class="stat-icon" style="background:#fffbeb;">💰</div>
@@ -77,7 +77,7 @@
               €{{ "%.2f"|format(valore_totale) }}
             {% else %}—{% endif %}
           </div>
-          <div class="stat-label">Valore Totale</div>
+          <div class="stat-label">Valore registrato</div>
         </div>
       </div>
       {% endif %}
@@ -134,6 +134,8 @@
                   <div style="font-weight:600; color:var(--text-primary);">
                     {{ prodotto.nome }}
                   </div>
+                  {% if prodotto.codice %}<div class="form-hint">Codice: {{ prodotto.codice.codice }}</div>{% endif %}
+                  {% if prodotto.stato_giacenza and prodotto.stato_giacenza.scheda_incompleta %}<span class="badge-custom badge-warning">Scheda da completare</span>{% endif %}
                   {% if prodotto.descrizione %}
                   <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
                     {{ prodotto.descrizione[:60] }}{% if prodotto.descrizione|length > 60 %}…{% endif %}
@@ -149,13 +151,15 @@
                 <!-- Prezzo -->
                 <td>
                   <span style="font-weight:700; color:var(--brand-success); font-size:15px;">
-                    € {{ "%.2f"|format(prodotto.prezzo) }}
+                    {% if prodotto.stato_giacenza and prodotto.stato_giacenza.scheda_incompleta %}Da completare{% else %}€ {{ "%.2f"|format(prodotto.prezzo) }}{% endif %}
                   </span>
                 </td>
 
                 <!-- Quantità badge -->
                 <td>
-                  {% if prodotto.quantita > 10 %}
+                  {% if prodotto.stato_giacenza and prodotto.stato_giacenza.da_verificare %}
+                    <span class="badge-custom badge-warning">Da verificare · {{ prodotto.quantita }} registrati</span>
+                  {% elif prodotto.quantita > 10 %}
                     <span class="badge-custom badge-success">✓ {{ prodotto.quantita }} pz</span>
                   {% elif prodotto.quantita > 0 %}
                     <span class="badge-custom badge-warning">⚡ {{ prodotto.quantita }} pz</span>

@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Movimenti magazzino — Gestionale Negozio{% endblock %}
+{% block heading %}Movimenti magazzino{% endblock %}
+{% block subtitle %}Ogni scansione registrata, con operatore e segnalazioni di giacenza.{% endblock %}
+{% block actions %}<a class="btn-brand" href="{{ url_for('scanner.index') }}">← Scansioni prodotti</a>{% endblock %}
+{% block content %}<section class="card-custom" style="overflow-x:auto"><table class="table-custom">
+<thead><tr><th>Data (Roma)</th><th>Prodotto / codice</th><th>Movimento</th><th>Quantità registrata</th><th>Operatore</th><th>Note</th></tr></thead>
+<tbody>{% for m in pagination.items %}<tr><td>{{ m.registrato_il|rome_time }}</td><td>{{ m.nome_prodotto }}<br><small>{{ m.codice }}</small></td><td>{{ '−1 Uscita' if m.modalita == 'uscita' else '+1 Rifornimento' }}</td><td>{{ m.quantita_prima }} → {{ m.quantita_dopo }}</td><td>{{ m.operatore }}</td><td>{% if m.discrepanza %}<span class="badge-custom badge-warning">Giacenza da verificare</span>{% else %}Registrato{% endif %}</td></tr>{% else %}<tr><td colspan="6">Nessun movimento registrato.</td></tr>{% endfor %}</tbody></table></section>
+<div class="calendar-actions" style="margin-top:20px">{% if pagination.has_prev %}<a class="btn-ghost" href="{{ url_for('scanner.history', page=pagination.prev_num) }}">← Precedenti</a>{% endif %}<span>Pagina {{ pagination.page }}</span>{% if pagination.has_next %}<a class="btn-ghost" href="{{ url_for('scanner.history', page=pagination.next_num) }}">Successivi →</a>{% endif %}</div>{% endblock %}

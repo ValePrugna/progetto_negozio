@@ -46,6 +46,11 @@
               {{ form.hidden_tag() }}
 
               <div class="form-group">
+                {{ form.codice_barre.label }}
+                {{ form.codice_barre(autocomplete="off", placeholder="Scansiona o scrivi il codice") }}
+                {% for error in form.codice_barre.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+              </div>
+              <div class="form-group">
                 {{ form.nome.label }}
                 {{ form.nome(placeholder="Es. iPhone 15 Pro") }}
                 {% for e in form.nome.errors %}

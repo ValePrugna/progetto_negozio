@@ -49,6 +49,8 @@
 
           <div style="padding:0 24px;">
 
+            {% if prodotto.codice %}<div class="detail-row"><div class="detail-label">Codice a barre</div><div class="detail-value">{{ prodotto.codice.codice }}</div></div>{% endif %}
+            {% if prodotto.stato_giacenza and prodotto.stato_giacenza.scheda_incompleta %}<p class="alert-custom alert-info">Scheda inserita rapidamente: completa prezzo, marca e descrizione.</p>{% endif %}
             <div class="detail-row">
               <div class="detail-label">Nome</div>
               <div class="detail-value" style="font-weight:700; font-size:17px;">{{ prodotto.nome }}</div>
@@ -63,7 +65,7 @@
               <div class="detail-label">Prezzo</div>
               <div class="detail-value">
                 <span style="font-size:22px; font-weight:800; color:var(--brand-success);">
-                  € {{ "%.2f"|format(prodotto.prezzo) }}
+                  {% if prodotto.stato_giacenza and prodotto.stato_giacenza.scheda_incompleta %}Da completare{% else %}€ {{ "%.2f"|format(prodotto.prezzo) }}{% endif %}
                 </span>
               </div>
             </div>
@@ -71,7 +73,8 @@
             <div class="detail-row">
               <div class="detail-label">Disponibilità</div>
               <div class="detail-value">
-                {% if prodotto.quantita > 10 %}
+                {% if prodotto.stato_giacenza and prodotto.stato_giacenza.da_verificare %}<span class="badge-custom badge-warning">Giacenza da verificare · {{ prodotto.quantita }} pezzi registrati</span>
+                {% elif prodotto.quantita > 10 %}
                   <span class="badge-custom badge-success">✓ {{ prodotto.quantita }} unità disponibili</span>
                 {% elif prodotto.quantita > 0 %}
                   <span class="badge-custom badge-warning">⚡ {{ prodotto.quantita }} unità (scorta limitata)</span>

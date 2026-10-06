@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 from dotenv import load_dotenv
-from flask import Flask, render_template
+from flask import Flask, render_template, request, jsonify
 from flask_talisman import Talisman
 from flask_wtf.csrf import CSRFError
 from sqlalchemy import URL
@@ -88,10 +88,12 @@ def create_app(test_config=None):
     from app.blueprint.routes import bp as routes
     from app.blueprint.auth import bp as auth
     from app.blueprint.calendar import bp as calendar
+    from app.blueprint.scanner import bp as scanner
     from app import models  # register all tables before init-db
     app.register_blueprint(routes)
     app.register_blueprint(auth)
     app.register_blueprint(calendar)
+    app.register_blueprint(scanner)
 
     @app.cli.command('init-db')
     def init_db():
@@ -124,6 +126,8 @@ def create_app(test_config=None):
 
     @app.errorhandler(CSRFError)
     def csrf_error(error):
+        if request.endpoint == 'scanner.scan':
+            return jsonify(status='sessione_scaduta', message='Modulo scaduto: ricarica la pagina e accedi se richiesto.'), 400
         return error_page(400, 'Modulo scaduto', 'Ricarica la pagina e riprova a inviare il modulo.')
 
     @app.errorhandler(413)
@@ -137,6 +141,8 @@ def create_app(test_config=None):
     @app.errorhandler(SQLAlchemyError)
     def database_error(error):
         db.session.rollback()
+        if request.endpoint == 'scanner.scan':
+            return jsonify(status='errore', message='Database non disponibile. Riprova la stessa scansione.'), 503
         app.logger.error('Operazione database fallita (%s).', type(error).__name__)
         return error_page(503, 'Database non disponibile',
                           'Riprova più tardi. Il capo deve verificare connessione e inizializzazione del database.')

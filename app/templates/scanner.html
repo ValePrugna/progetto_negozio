@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Scansioni prodotti — Gestionale Negozio{% endblock %}
+{% block heading %}Scansioni prodotti{% endblock %}
+{% block subtitle %}Scegli la modalità, scansiona il codice e continua con il prodotto successivo.{% endblock %}
+{% block actions %}<a class="btn-ghost" href="{{ url_for('scanner.history') }}">Storico movimenti</a>{% endblock %}
+{% block content %}
+<div id="scanner-app" data-endpoint="{{ url_for('scanner.scan') }}" data-search="{{ url_for('scanner.search') }}" data-actor="{{ current_user.username }}">
+  <input id="scan-csrf" type="hidden" value="{{ csrf_token() }}">
+  <section class="card-custom scan-card">
+    <div class="scan-modes" role="group" aria-label="Modalità scansione">
+      <button type="button" class="scan-mode selected" data-mode="uscita" aria-pressed="true"><strong>−1 Uscita</strong><span>Toglie un pezzo dal magazzino</span></button>
+      <button type="button" class="scan-mode" data-mode="rifornimento" aria-pressed="false"><strong>+1 Rifornimento</strong><span>Aggiunge un pezzo al magazzino</span></button>
+    </div>
+    <p id="scan-mode-status" class="scan-mode-status">Modalità attiva: Uscita · ogni codice + Invio registra un pezzo in uscita.</p>
+    <form id="scan-form" class="form-custom">
+      <label for="scan-code">Codice a barre</label>
+      <div class="scan-input-row"><input id="scan-code" type="text" autocomplete="off" autofocus placeholder="Scansiona oppure scrivi il codice e premi Invio"><button class="btn-brand" type="submit">Registra</button></div>
+    </form>
+    <p class="form-hint">Per provare senza lettore, scrivi il codice e premi Invio. Per più pezzi uguali, ripeti la scansione.</p>
+    <p id="scan-queue" role="status">Pronto per la scansione.</p>
+    <div id="scan-feedback" role="status" aria-live="polite"></div>
+  </section>
+  <section id="scan-recovery" class="card-custom scan-card" hidden>
+    <h2 id="recovery-title"></h2><p id="recovery-context"></p>
+    <div id="unknown-recovery" hidden>
+      <h3>Il prodotto è già nell’inventario?</h3>
+      <form id="scan-search-form" class="form-custom scan-input-row"><input id="scan-search" type="search" aria-label="Cerca prodotto per nome o marca" placeholder="Cerca per nome o marca"><button class="btn-ghost" type="submit">Cerca</button></form>
+      <div id="scan-search-results" class="scan-search-results" aria-live="polite"></div>
+      <details id="quick-create"><summary>Non è presente: registra un nuovo prodotto</summary>
+        <form id="quick-product-form" class="form-custom">
+          <div class="form-group"><label for="quick-name">Nome del prodotto</label><input id="quick-name" required maxlength="255" placeholder="Es. Pasta 500 g"></div>
+          <div class="form-group"><label for="quick-stock">Pezzi presenti prima di questa scansione (facoltativo)</label><input id="quick-stock" type="number" min="0" max="2147483647" step="1" placeholder="Lascia vuoto se non li hai contati"></div>
+          <p class="form-hint">Se non conosci la quantità, la giacenza resterà da verificare. Prezzo, marca e descrizione si possono completare dopo.</p>
+          <button id="quick-submit" class="btn-brand" type="submit">Crea prodotto e registra uscita</button>
+        </form>
+      </details>
+    </div>
+    <div id="zero-recovery" hidden>
+      <p class="alert-custom alert-info">La quantità registrata è zero, ma puoi continuare se hai effettivamente il pezzo presente. Registreremo l’uscita senza inventare quanti pezzi restano.</p>
+      <button id="confirm-present" class="btn-brand" type="button">Il prodotto è presente: registra l’uscita</button>
+    </div>
+    <div id="error-recovery" hidden><p id="recovery-error" class="form-error" role="alert"></p><button id="retry-scan" class="btn-ghost" type="button">Riprova questa scansione</button> <a class="btn-ghost" href="{{ url_for('scanner.index') }}">Ricarica / accedi di nuovo</a></div>
+    <button id="reset-recovery" class="btn-ghost scan-cancel" type="button" hidden>Scegli un altro prodotto</button>
+    <button id="skip-scan" class="btn-ghost scan-cancel" type="button">Salta questa scansione</button>
+  </section>
+  <section class="card-custom scan-card"><h2>Ultime scansioni di questa sessione</h2><ul id="scan-log" class="scan-log"><li id="scan-log-empty">Nessuna scansione registrata.</li></ul></section>
+</div>
+<script src="{{ url_for('static', filename='scanner.js') }}" defer></script>
+{% endblock %}

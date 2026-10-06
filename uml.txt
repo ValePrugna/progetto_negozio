@@ -26,3 +26,21 @@ Impegno
 TurnoMigrato
   impegno_id: FK/PK -> impegni_calendario.id
   Impedisce di riconvertire i turni precedenti dopo modifiche agli slot.
+
+CodiceProdotto
+  codice: testo (PK), prodotto_id: FK univoca -> prodotti.id.
+  Conserva zeri iniziali; un codice per prodotto.
+
+StatoGiacenza
+  prodotto_id: PK/FK -> prodotti.id
+  da_verificare, scheda_incompleta: Boolean
+
+MovimentoMagazzino
+  richiesta_id: UUID (PK), chiave di idempotenza
+  prodotto_id e nome_prodotto: riferimenti storici conservati senza cascata
+  codice, modalita, variazione, quantita_prima, quantita_dopo
+  discrepanza, operatore, registrato_il (UTC)
+
+Scansione: Uscita -1 oppure Rifornimento +1.
+Uscita a zero: conferma presenza, registra movimento -1, mantiene conteggio 0 da verificare.
+Associazione/creazione e movimento sono una sola transazione.

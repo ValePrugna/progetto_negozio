@@ -30,6 +30,77 @@ la chiave di sessione locale e `.env` sono esclusi da Git. La chiave locale vien
 una sola volta, con permessi riservati, così le sessioni restano valide dopo il riavvio.
 La modalità sviluppo è il valore predefinito; per produzione impostare esplicitamente `APP_ENV=production`.
 
+## Scansioni prodotti: uscita e rifornimento
+
+![Pagina scansioni prodotti](docs/scansioni-prodotti.png)
+
+Apri **Scansioni prodotti**. La modalità iniziale è **Uscita**.
+Ogni codice seguito da Invio registra un movimento di **un pezzo**:
+
+- **Uscita −1** diminuisce la quantità; il prodotto resta nell’inventario anche a zero.
+- **Rifornimento +1** aumenta la quantità. La modalità selezionata è evidenziata.
+- Puoi usare un lettore USB in modalità tastiera con suffisso Invio, oppure scrivere il codice
+  con la tastiera per provare senza hardware. Il NetumScan NSL5 non è stato provato fisicamente.
+  Verifica nel manuale USB HID e suffisso Enter; evita letture automatiche ripetute dello stesso
+  pezzo tenuto fermo davanti al sensore. Ogni lettura completa viene considerata un pezzo distinto.
+
+I codici sono testo: gli zeri iniziali vengono conservati. Si accettano codici di massimo
+128 caratteri ASCII senza spazi o controlli; una scansione non è interpretata come un URL
+né apre collegamenti. Ogni codice corrisponde a un prodotto, con un codice per scheda.
+Puoi inserirlo anche da **Aggiungi Prodotto** o **Modifica** e cercarlo nell’inventario.
+
+### Recuperare prodotti mancanti senza bloccare l’uscita
+
+Se il codice è sconosciuto, la pagina mette in pausa la scansione e offre due alternative:
+
+1. **Prodotto già presente:** cercalo per nome/marca, poi scegli **Associa e registra**.
+   Il codice viene collegato alla scheda e viene registrato il movimento corrente, insieme.
+2. **Prodotto assente:** apri **Non è presente: registra un nuovo prodotto**, inserisci il nome
+   e, se la conosci, la quantità presente **prima** della scansione. Conferma con
+   **Crea prodotto e registra uscita/rifornimento**. Prezzo, marca e descrizione si possono completare dopo.
+
+Non occorre scansionare ogni pezzo per creare la scheda: se sono 30 confezioni identiche,
+puoi indicare 30 come quantità iniziale. La scansione corrente viene applicata dopo: 29 in uscita,
+31 in rifornimento. Se la quantità iniziale non è nota, lascia il campo vuoto: il conteggio
+registrato parte da zero e viene segnalato **da verificare**, senza inventare le scorte reali.
+Una registrazione rapida appare come **Scheda da completare**, con il prezzo **Da completare**.
+
+### Prodotto presente ma quantità registrata zero
+
+Per l’uscita, premi **Il prodotto è presente: registra l’uscita**. Il movimento fisico −1
+viene salvato nello storico e la scheda viene marcata **Giacenza da verificare**.
+Il conteggio numerico resta zero: non viene cancellato il prodotto, non si inventa
+la disponibilità restante e non vengono create giacenze negative.
+La segnalazione resta anche dopo successivi rifornimenti. Per risolverla, conta i pezzi,
+apri **Modifica**, inserisci la quantità effettiva e spunta **Ho contato i pezzi presenti**.
+Completare solo nome/prezzo o registrare un rifornimento non cancella la segnalazione.
+
+Le scansioni consecutive sono accodate; ogni richiesta conserva la modalità scelta quando
+è stata letta. Se si interrompe la risposta di rete, usa **Riprova questa scansione**:
+lo stesso identificativo impedisce di applicare due volte un movimento già registrato.
+Le richieste in attesa sono conservate in `sessionStorage` per la stessa scheda del browser
+anche dopo una ricarica; non chiudere la scheda con scansioni pendenti. In caso di pausa,
+completa o salta esplicitamente il codice prima di continuare a usare il lettore.
+
+**Storico movimenti** mostra prodotto, codice, operatore, data locale di Roma,
+variazione e quantità prima/dopo. Le segnalazioni sono fotografate al momento del movimento;
+restano nello storico anche dopo aver verificato la giacenza. Lo storico viene conservato
+anche se una scheda prodotto viene eliminata manualmente. Non è un registro fiscale delle vendite.
+
+### Installare l’aggiornamento su un database esistente
+
+Esegui `python -m flask --app run init-db` dopo aver aggiornato `app` e `static`.
+Aggiunge `codici_prodotti`, `stati_giacenza` e `movimenti_magazzino`, senza modificare le
+colonne della tabella prodotti o azzerare le quantità esistenti. Non attribuisce codici
+arbitrari alle schede: inseriscili manualmente o associali al primo passaggio del prodotto.
+Conserva e fai il backup della cartella `instance` e dell’eventuale `.env`.
+
+Su PythonAnywhere, conserva la cartella già indicata nel file WSGI e il relativo ambiente
+`.venv`. Caricare un nuovo ZIP non aggiorna automaticamente il sito: copia i contenuti
+nuovi di `app` e `static` nella cartella configurata, esegui `init-db` nella console Bash
+con la `.venv` attiva, quindi premi **Reload** nella scheda **Web**. Conserva account,
+database e chiave di sessione in `instance`. Non avviare `flask run` per servire il sito pubblico.
+
 ## Turni: due slot per giorno
 
 ![Calendario con slot mattina e pomeriggio](docs/calendario-turni.png)
@@ -128,10 +199,13 @@ python -m pip check
 python -m unittest discover -s tests -v
 ```
 
-I test esercitano autenticazione reale, CSRF, logout, inventario, upload PNG/MIME,
+I 50 test esercitano autenticazione reale, CSRF, logout, inventario, upload PNG/MIME,
 file e numeri non validi, due soli slot giornalieri, colori rosso/verde,
 assegnazioni multiple e rimozione dei volontari, eventi separati, volontari disattivati,
 limiti del mese e conversione ripetibile dei turni precedenti.
+I test delle scansioni coprono barcode con zeri iniziali, Uscita/Rifornimento, associazione
+e creazione rapida, conferma a zero, giacenze da verificare, codici duplicati, idempotenza
+anche con richieste concorrenti, storico e inizializzazione ripetibile.
 La suite viene eseguita anche senza fusi orari di sistema, usando `tzdata` come su Windows.
 Non contattano TiDB né modificano dati reali.
 

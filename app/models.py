@@ -1,4 +1,5 @@
 from app.extensions import db, login_manager
+from app.barcodes import barcode_validator
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import (StringField, IntegerField, TextAreaField, SubmitField,
@@ -19,6 +20,9 @@ class Prodotto(db.Model):
     descrizione = db.Column(db.Text)
     nome_file = db.Column(db.String(255))
     file_data = db.Column(db.LargeBinary(length=16777215))
+
+    codice = db.relationship('CodiceProdotto', back_populates='prodotto', uselist=False, cascade='all, delete-orphan')
+    stato_giacenza = db.relationship('StatoGiacenza', back_populates='prodotto', uselist=False, cascade='all, delete-orphan')
 
     def __init__(self, nome=None, marca=None, prezzo=None, quantita=None, descrizione=None, nome_file=None, file_data=None):
         self.nome = nome
@@ -64,6 +68,9 @@ def finite_price(form, field):
 
 
 class AggiungiProdotto(FlaskForm):
+    codice_barre = StringField('Codice a barre (facoltativo)', validators=[Optional(), barcode_validator],
+                               filters=[lambda s: s.strip() if s else s])
+    giacenza_confermata = BooleanField('Ho contato i pezzi presenti: la quantità inserita è verificata')
     nome = StringField('Nome', validators=[DataRequired(), Length(max=255)])
     marca = StringField('Marca', validators=[DataRequired(), Length(max=255)])
     # FIX MED-2: validazione numeri positivi
@@ -163,3 +170,38 @@ class EventoForm(FlaskForm):
                 raise ValidationError('Scegli una data tra il 2000 e il 2100.')
             if self.giorno.data and field.data < self.giorno.data:
                 raise ValidationError('L’ultimo giorno non può precedere il primo.')
+
+
+class CodiceProdotto(db.Model):
+    __tablename__ = 'codici_prodotti'
+    codice = db.Column(db.String(128).with_variant(db.String(128, collation='utf8mb4_bin'), 'mysql'), primary_key=True)
+    prodotto_id = db.Column(db.Integer, db.ForeignKey('prodotti.id'), nullable=False, unique=True)
+    prodotto = db.relationship('Prodotto', back_populates='codice')
+
+
+class StatoGiacenza(db.Model):
+    __tablename__ = 'stati_giacenza'
+    prodotto_id = db.Column(db.Integer, db.ForeignKey('prodotti.id'), primary_key=True)
+    da_verificare = db.Column(db.Boolean, nullable=False, default=False)
+    scheda_incompleta = db.Column(db.Boolean, nullable=False, default=False)
+    prodotto = db.relationship('Prodotto', back_populates='stato_giacenza')
+
+
+class MovimentoMagazzino(db.Model):
+    __tablename__ = 'movimenti_magazzino'
+    richiesta_id = db.Column(db.String(36), primary_key=True)
+    # Historical snapshots survive deletion of the product and barcode mapping.
+    prodotto_id = db.Column(db.Integer, nullable=False, index=True)
+    nome_prodotto = db.Column(db.String(255), nullable=False)
+    codice = db.Column(db.String(128), nullable=False)
+    modalita = db.Column(db.String(20), nullable=False)
+    variazione = db.Column(db.Integer, nullable=False)
+    quantita_prima = db.Column(db.Integer, nullable=False)
+    quantita_dopo = db.Column(db.Integer, nullable=False)
+    discrepanza = db.Column(db.Boolean, nullable=False, default=False)
+    operatore = db.Column(db.String(255), nullable=False)
+    registrato_il = db.Column(db.DateTime, nullable=False)
+    __table_args__ = (
+        db.CheckConstraint("modalita IN ('uscita', 'rifornimento')", name='movimento_modalita_valida'),
+        db.CheckConstraint('quantita_dopo >= 0', name='movimento_giacenza_non_negativa'),
+    )

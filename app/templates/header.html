@@ -26,6 +26,7 @@
       Aggiungi Prodotto
     </a>
 
+    <a href="{{ url_for('scanner.index') }}" class="sidebar-link {% if request.blueprint == 'scanner' %}active{% endif %}"><span class="nav-icon">▥</span> Scansioni prodotti</a>
     <a href="{{ url_for('calendar.index') }}" class="sidebar-link {% if request.blueprint == 'calendar' and request.endpoint not in ['calendar.events', 'calendar.new_event', 'calendar.edit_event'] %}active{% endif %}"><span class="nav-icon">📅</span> Turni dei volontari</a>
     <a href="{{ url_for('calendar.events') }}" class="sidebar-link {% if request.endpoint in ['calendar.events', 'calendar.new_event', 'calendar.edit_event'] %}active{% endif %}"><span class="nav-icon">📝</span> Eventi del mese</a>
   </nav>
