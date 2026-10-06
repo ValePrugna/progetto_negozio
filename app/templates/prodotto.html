@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ prodotto.nome }} — Gestionale Negozio</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="app-shell">
+
+  {% include 'header.html' %}
+
+  <div class="main-content">
+
+    <header class="topbar">
+      <a href="{{ url_for('routes.index') }}" class="btn-ghost" style="padding:7px 14px; font-size:13px;">
+        ← Inventario
+      </a>
+      <h1 class="topbar-title" style="font-size:16px; margin-left:12px;">
+        {{ prodotto.nome }}
+      </h1>
+      <div style="display:flex; gap:8px; margin-left:auto;">
+        <a href="{{ url_for('routes.modifica', id=prodotto.id) }}" class="btn-ghost"
+           style="border-color:#fde68a; color:#b45309;">
+          ✏️ Modifica
+        </a>
+        <form method="POST"
+              action="{{ url_for('routes.elimina', id=prodotto.id) }}"
+              data-confirm="Eliminare il prodotto «{{ prodotto.nome }}»?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn-danger-soft">🗑 Elimina</button>
+        </form>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <div class="product-detail-grid">
+
+        <!-- LEFT: dettagli prodotto -->
+        <div class="card-custom fade-in-up">
+          <div class="card-header-custom">
+            <h2>📋 Dettagli Prodotto</h2>
+            <span class="badge-custom badge-neutral">#{{ prodotto.id }}</span>
+          </div>
+
+          <div style="padding:0 24px;">
+
+            <div class="detail-row">
+              <div class="detail-label">Nome</div>
+              <div class="detail-value" style="font-weight:700; font-size:17px;">{{ prodotto.nome }}</div>
+            </div>
+
+            <div class="detail-row">
+              <div class="detail-label">Marca</div>
+              <div class="detail-value">{{ prodotto.marca }}</div>
+            </div>
+
+            <div class="detail-row">
+              <div class="detail-label">Prezzo</div>
+              <div class="detail-value">
+                <span style="font-size:22px; font-weight:800; color:var(--brand-success);">
+                  € {{ "%.2f"|format(prodotto.prezzo) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="detail-row">
+              <div class="detail-label">Disponibilità</div>
+              <div class="detail-value">
+                {% if prodotto.quantita > 10 %}
+                  <span class="badge-custom badge-success">✓ {{ prodotto.quantita }} unità disponibili</span>
+                {% elif prodotto.quantita > 0 %}
+                  <span class="badge-custom badge-warning">⚡ {{ prodotto.quantita }} unità (scorta limitata)</span>
+                {% else %}
+                  <span class="badge-custom badge-danger">✕ Prodotto esaurito</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="detail-row" style="border-bottom:none;">
+              <div class="detail-label">Descrizione</div>
+              <div class="detail-value" style="color:var(--text-secondary); line-height:1.7; white-space:pre-line;">
+                {% if prodotto.descrizione %}
+                  {{ prodotto.descrizione }}
+                {% else %}
+                  <span style="color:var(--text-muted); font-style:italic;">Nessuna descrizione disponibile.</span>
+                {% endif %}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- RIGHT: immagine -->
+        <div class="card-custom fade-in-up" style="animation-delay:.08s;">
+          <div class="card-header-custom">
+            <h2>📷 Immagine</h2>
+          </div>
+          <div style="padding:24px; text-align:center;">
+            {% if prodotto.nome_file and prodotto.file_data %}
+              <img
+                src="data:{{ prodotto.file_data | image_mime }};base64,{{ prodotto.file_data | b64encode }}"
+                alt="{{ prodotto.nome }}"
+                style="max-width:100%; max-height:280px; border-radius:var(--radius-md); object-fit:contain; box-shadow:var(--shadow-md);"
+              >
+              <p style="font-size:12px; color:var(--text-muted); margin-top:12px;">{{ prodotto.nome_file }}</p>
+            {% else %}
+              <div style="height:200px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--body-bg); border-radius:var(--radius-md); border:2px dashed var(--border-color);">
+                <span style="font-size:40px; margin-bottom:8px;">📷</span>
+                <p style="color:var(--text-muted); font-size:13px; margin:0;">Nessuna immagine</p>
+              </div>
+              <div style="margin-top:16px;">
+                <a href="{{ url_for('routes.modifica', id=prodotto.id) }}" class="btn-ghost" style="font-size:13px;">
+                  ➕ Aggiungi immagine
+                </a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    {% include 'footer.html' %}
+  </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</body>
+</html>

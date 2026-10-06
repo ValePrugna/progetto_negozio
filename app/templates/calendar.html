@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Calendario e turni — Gestionale Negozio{% endblock %}
+{% block heading %}Calendario e turni{% endblock %}
+{% block subtitle %}Organizza i volontari e gli eventi del negozio · Orari di Roma{% endblock %}
+{% block actions %}<a class="btn-ghost" href="{{ url_for('calendar.volunteers') }}">Volontari</a><a class="btn-brand" href="{{ url_for('calendar.new') }}">+ Nuovo impegno</a>{% endblock %}
+{% block content %}
+<section class="card-custom calendar-toolbar" aria-label="Filtri calendario">
+<div class="calendar-month-nav">{% if previous %}<a class="btn-ghost" aria-label="Mese precedente" href="{{ url_for('calendar.index', mese=previous, tipo=kind, volontario=volunteer) }}">←</a>{% endif %}<h2>{{ label }}</h2>{% if following %}<a class="btn-ghost" aria-label="Mese successivo" href="{{ url_for('calendar.index', mese=following, tipo=kind, volontario=volunteer) }}">→</a>{% endif %}<a class="btn-ghost" href="{{ url_for('calendar.index') }}">Oggi</a></div>
+<form method="GET" class="form-custom calendar-filters">
+<div><label for="mese">Mese</label><input id="mese" type="month" name="mese" value="{{ month.strftime('%Y-%m') }}" min="2000-01" max="2100-12"></div>
+<div><label for="tipo">Tipo</label><select id="tipo" name="tipo"><option value="">Turni ed eventi</option><option value="turno" {% if kind == 'turno' %}selected{% endif %}>Turni</option><option value="evento" {% if kind == 'evento' %}selected{% endif %}>Eventi</option></select></div>
+<div><label for="volontario">Volontario</label><select id="volontario" name="volontario"><option value="">Tutti</option>{% for v in volunteers %}<option value="{{ v.id }}" {% if volunteer == v.id|string %}selected{% endif %}>{{ v.nome }}{% if not v.attivo %} (non attivo){% endif %}</option>{% endfor %}</select></div><button type="submit" class="btn-ghost">Filtra</button>
+</form></section>
+<div class="calendar-legend"><span class="legend-turno">● Turni volontari</span><span class="legend-evento">● Eventi particolari</span><span>Clicca su un giorno per aggiungere un impegno.</span></div>
+<section class="card-custom calendar-overflow" aria-label="Calendario {{ label }}">
+<div class="calendar-grid" role="table" aria-label="{{ label }}">
+<div class="calendar-weekdays" role="row">{% for day in ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'] %}<div role="columnheader">{{ day }}</div>{% endfor %}</div>
+{% for week in weeks %}<div class="calendar-week" role="row">{% for day in week %}
+<div role="cell" class="calendar-day {% if day.month != month.month %}outside-month{% endif %} {% if day == today %}is-today{% endif %}">
+<a class="calendar-date" href="{{ url_for('calendar.new', giorno=day.isoformat()) }}" aria-label="Aggiungi impegno il {{ day.strftime('%d/%m/%Y') }}">{{ day.day }}</a>
+{% for entry in by_day[day] %}<a class="calendar-entry {{ entry.tipo }}" href="{{ url_for('calendar.edit', entry_id=entry.id) }}"><span class="entry-time">{{ entry.inizio.strftime('%H:%M') if entry.inizio.date() == day else '↳ continua' }} · {{ 'Turno' if entry.tipo == 'turno' else 'Evento' }}</span><strong>{{ entry.titolo }}</strong>{% if entry.volontario %}<span>{{ entry.volontario.nome }}</span>{% endif %}</a>{% endfor %}
+</div>{% endfor %}</div>{% endfor %}</div></section>
+<section class="card-custom calendar-agenda"><div class="card-header-custom"><h2>Agenda di {{ label }}</h2><span>{{ entries|length }} impegni</span></div>
+{% for entry in entries %}<article class="agenda-entry"><div><span class="badge-custom {{ 'badge-success' if entry.tipo == 'turno' else 'badge-neutral' }}">{{ 'Turno' if entry.tipo == 'turno' else 'Evento' }}</span><h3>{{ entry.titolo }}</h3><p>{{ entry.inizio.strftime('%d/%m/%Y %H:%M') }} → {{ entry.fine.strftime('%d/%m/%Y %H:%M') }}</p>{% if entry.volontario %}<p><strong>Volontario:</strong> {{ entry.volontario.nome }}</p>{% endif %}{% if entry.luogo %}<p><strong>Luogo:</strong> {{ entry.luogo }}</p>{% endif %}{% if entry.note %}<p class="entry-notes">{{ entry.note }}</p>{% endif %}</div><a class="btn-ghost" href="{{ url_for('calendar.edit', entry_id=entry.id) }}">Modifica</a></article>
+{% else %}<div class="empty-state"><span class="empty-icon">📅</span><h4>Nessun impegno in questo mese</h4><p>Aggiungi un turno o un evento, oppure modifica i filtri.</p><a class="btn-brand" href="{{ url_for('calendar.new', giorno=month.isoformat()) }}">+ Nuovo impegno</a></div>{% endfor %}</section>
+{% endblock %}

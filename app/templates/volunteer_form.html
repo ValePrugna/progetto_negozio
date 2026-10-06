@@ -1,0 +1,4 @@
+{% extends 'base.html' %}
+{% block title %}Modifica volontario — Gestionale Negozio{% endblock %}{% block heading %}Modifica volontario{% endblock %}
+{% block subtitle %}Disattiva un volontario per escluderlo dai nuovi turni, conservando lo storico.{% endblock %}
+{% block content %}<section class="card-custom calendar-form-card"><form class="form-custom" method="POST" novalidate>{{ form.hidden_tag() }}<div class="form-group">{{ form.nome.label }}{{ form.nome() }}{% for error in form.nome.errors %}<p class="form-error">{{ error }}</p>{% endfor %}</div><label class="checkbox-label">{{ form.attivo() }} Disponibile per nuovi turni</label><div class="calendar-actions"><button type="submit" class="btn-brand">Salva volontario</button><a class="btn-ghost" href="{{ url_for('calendar.volunteers') }}">Annulla</a></div></form></section>{% endblock %}

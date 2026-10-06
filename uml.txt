@@ -1,0 +1,27 @@
+Gestionale negozio — schema aggiornato
+
+Admin
+  username: String (PK)
+  password: hash
+  Ruolo applicativo: capo; accesso a inventario, volontari e calendario.
+
+Prodotto
+  id: Integer (PK)
+  nome, marca, prezzo, quantita, descrizione, nome_file, file_data
+
+Volontario
+  id: Integer (PK)
+  nome: String
+  attivo: Boolean
+  Non dispone di credenziali di accesso.
+
+Impegno
+  id: Integer (PK)
+  tipo: turno | evento
+  titolo, inizio, fine, luogo, note
+  volontario_id: Integer (FK -> Volontario.id, nullable per eventi)
+
+Relazioni
+  Volontario 1 ---- 0..* Impegno (solo turni)
+  Un evento non ha volontario associato.
+  fine > inizio; turni dello stesso volontario non sovrapposti.

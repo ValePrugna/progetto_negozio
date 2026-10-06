@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aggiungi Prodotto — Gestionale Negozio</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="app-shell">
+
+  {% include 'header.html' %}
+
+  <div class="main-content">
+
+    <header class="topbar">
+      <a href="{{ url_for('routes.index') }}" class="btn-ghost" style="padding:7px 14px; font-size:13px;">
+        ← Inventario
+      </a>
+      <h1 class="topbar-title" style="font-size:16px; margin-left:12px;">➕ Aggiungi Prodotto</h1>
+    </header>
+
+    <main class="page-content">
+      <div style="max-width:680px; margin:0 auto;">
+        <div class="card-custom fade-in-up">
+          <div class="card-header-custom">
+            <h2>Informazioni Prodotto</h2>
+            <span style="font-size:12px; color:var(--text-muted);">* campi obbligatori</span>
+          </div>
+
+          <div style="padding:28px 28px 20px;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert-custom alert-{{ 'danger' if category == 'error' or category == 'danger' else category }}" style="margin-bottom: 20px;">
+                    {% if category == 'danger' or category == 'error' %}⚠️{% elif category == 'success' %}✅{% else %}ℹ️{% endif %}
+                    {{ message }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <form method="POST" enctype="multipart/form-data" class="form-custom" novalidate>
+              {{ form.hidden_tag() }}
+
+              <div class="form-group">
+                {{ form.nome.label }}
+                {{ form.nome(placeholder="Es. iPhone 15 Pro") }}
+                {% for e in form.nome.errors %}
+                  <div class="form-error">⚠ {{ e }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="form-group">
+                {{ form.marca.label }}
+                {{ form.marca(placeholder="Es. Apple") }}
+                {% for e in form.marca.errors %}
+                  <div class="form-error">⚠ {{ e }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="form-row">
+                <div class="form-group" style="margin-bottom:0;">
+                  {{ form.prezzo.label }}
+                  {{ form.prezzo(placeholder="0.00", step="0.01", type="number") }}
+                  {% for e in form.prezzo.errors %}
+                    <div class="form-error">⚠ {{ e }}</div>
+                  {% endfor %}
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  {{ form.quantita.label }}
+                  {{ form.quantita(placeholder="0", type="number") }}
+                  {% for e in form.quantita.errors %}
+                    <div class="form-error">⚠ {{ e }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top:20px;">
+                {{ form.descrizione.label }}
+                {{ form.descrizione(rows="4", placeholder="Descrivi il prodotto…") }}
+                {% for e in form.descrizione.errors %}
+                  <div class="form-error">⚠ {{ e }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="form-group">
+                {{ form.file.label }}
+                {{ form.file(accept="image/*") }}
+                <div class="form-hint">📎 Solo immagini: jpg, jpeg, png, gif, webp · Max 5 MB</div>
+                {% for e in form.file.errors %}
+                  <div class="form-error">⚠ {{ e }}</div>
+                {% endfor %}
+              </div>
+
+              <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
+                <button type="submit" class="btn-brand">
+                  ➕ Salva Prodotto
+                </button>
+                <a href="{{ url_for('routes.index') }}" class="btn-ghost">
+                  Annulla
+                </a>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    {% include 'footer.html' %}
+  </div>
+
+</div>
+
+</body>
+</html>

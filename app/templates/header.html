@@ -1,0 +1,39 @@
+<!-- SIDEBAR -->
+<aside class="sidebar">
+
+  <div class="sidebar-brand">
+    <a href="{{ url_for('routes.index') }}">
+      <div class="brand-icon">🏪</div>
+      <div class="brand-name">
+        Gestionale
+        <span>Negozio</span>
+      </div>
+    </a>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section-label">Menu</div>
+
+    <a href="{{ url_for('routes.index') }}"
+       class="sidebar-link {% if request.endpoint == 'routes.index' %}active{% endif %}">
+      <span class="nav-icon">📦</span>
+      Inventario
+    </a>
+
+    <a href="{{ url_for('routes.aggiungi') }}"
+       class="sidebar-link {% if request.endpoint == 'routes.aggiungi' %}active{% endif %}">
+      <span class="nav-icon">➕</span>
+      Aggiungi Prodotto
+    </a>
+
+    <a href="{{ url_for('calendar.index') }}" class="sidebar-link {% if request.blueprint == 'calendar' %}active{% endif %}"><span class="nav-icon">📅</span> Calendario e turni</a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <form method="POST" action="{{ url_for('routes.logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="sidebar-link logout-button" type="submit"><span class="nav-icon">🚪</span> Logout</button>
+    </form>
+  </div>
+
+</aside>

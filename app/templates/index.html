@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventario Prodotti — Gestionale Negozio</title>
+  <meta name="description" content="Gestisci il tuo inventario prodotti in modo semplice e veloce.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="app-shell">
+
+  {% include 'header.html' %}
+
+  <div class="main-content">
+
+    <!-- TOP BAR con ricerca -->
+    <header class="topbar">
+      <div>
+        <h1 class="topbar-title">Inventario Prodotti</h1>
+        <div class="topbar-subtitle">
+          {% if q %}
+            {{ prodotti|length }} risultat{{ 'o' if prodotti|length == 1 else 'i' }} per "<strong>{{ q }}</strong>"
+          {% else %}
+            {{ prodotti|length }} prodott{{ 'o' if prodotti|length == 1 else 'i' }} in magazzino
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- SEARCH BAR -->
+      <form method="GET" action="{{ url_for('routes.index') }}" style="flex:1; max-width:360px; margin: 0 auto;">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input
+            type="search"
+            name="q"
+            value="{{ q }}"
+            placeholder="Cerca per nome, marca, descrizione…"
+            class="search-input"
+            id="search-input"
+            autocomplete="off"
+          >
+        </div>
+      </form>
+
+      <a href="{{ url_for('routes.aggiungi') }}" class="btn-brand">
+        ➕ Aggiungi Prodotto
+      </a>
+    </header>
+
+    <main class="page-content">
+
+      <!-- Stats row -->
+      {% if not q %}
+      <div class="stats-grid fade-in-up">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#eef2ff;">📦</div>
+          <div class="stat-value">{{ prodotti|length }}</div>
+          <div class="stat-label">Prodotti Totali</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#f0fdf4;">✅</div>
+          <div class="stat-value">{{ prodotti|selectattr('quantita','gt',0)|list|length }}</div>
+          <div class="stat-label">Disponibili</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fef2f2;">⚠️</div>
+          <div class="stat-value">{{ prodotti|selectattr('quantita','eq',0)|list|length }}</div>
+          <div class="stat-label">Esauriti</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fffbeb;">💰</div>
+          <div class="stat-value">
+            {% if prodotti %}
+              €{{ "%.2f"|format(valore_totale) }}
+            {% else %}—{% endif %}
+          </div>
+          <div class="stat-label">Valore Totale</div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Prodotti Table -->
+      <div class="card-custom fade-in-up">
+
+        {% if q %}
+        <div class="card-header-custom">
+          <h2>Risultati ricerca</h2>
+          <a href="{{ url_for('routes.index') }}" class="btn-ghost" style="font-size:13px;">
+            ✕ Cancella ricerca
+          </a>
+        </div>
+        {% endif %}
+
+        <div style="overflow-x:auto;">
+          <table class="table-custom">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Foto</th>
+                <th>Prodotto</th>
+                <th>Marca</th>
+                <th>Prezzo</th>
+                <th>Disponibilità</th>
+                <th style="text-align:right;">Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="products-tbody">
+
+              {% for prodotto in prodotti %}
+              <tr>
+                <!-- ID -->
+                <td>
+                  <span class="badge-custom badge-neutral">#{{ prodotto.id }}</span>
+                </td>
+
+                <!-- Foto -->
+                <td>
+                  {% if prodotto.nome_file and prodotto.file_data %}
+                    <img
+                      src="data:{{ prodotto.file_data | image_mime }};base64,{{ prodotto.file_data | b64encode }}"
+                      alt="{{ prodotto.nome }}"
+                      class="product-thumb"
+                    >
+                  {% else %}
+                    <div class="product-thumb-placeholder">📷</div>
+                  {% endif %}
+                </td>
+
+                <!-- Nome + Descrizione breve -->
+                <td>
+                  <div style="font-weight:600; color:var(--text-primary);">
+                    {{ prodotto.nome }}
+                  </div>
+                  {% if prodotto.descrizione %}
+                  <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                    {{ prodotto.descrizione[:60] }}{% if prodotto.descrizione|length > 60 %}…{% endif %}
+                  </div>
+                  {% endif %}
+                </td>
+
+                <!-- Marca -->
+                <td style="color:var(--text-secondary); font-size:13px;">
+                  {{ prodotto.marca }}
+                </td>
+
+                <!-- Prezzo -->
+                <td>
+                  <span style="font-weight:700; color:var(--brand-success); font-size:15px;">
+                    € {{ "%.2f"|format(prodotto.prezzo) }}
+                  </span>
+                </td>
+
+                <!-- Quantità badge -->
+                <td>
+                  {% if prodotto.quantita > 10 %}
+                    <span class="badge-custom badge-success">✓ {{ prodotto.quantita }} pz</span>
+                  {% elif prodotto.quantita > 0 %}
+                    <span class="badge-custom badge-warning">⚡ {{ prodotto.quantita }} pz</span>
+                  {% else %}
+                    <span class="badge-custom badge-danger">✕ Esaurito</span>
+                  {% endif %}
+                </td>
+
+                <!-- Azioni -->
+                <td style="text-align:right; white-space:nowrap;">
+                  <a href="{{ url_for('routes.prodotto', id=prodotto.id) }}"
+                     class="btn-ghost"
+                     style="padding:6px 12px; font-size:12px; margin-right:4px;">
+                    👁 Dettagli
+                  </a>
+                  <a href="{{ url_for('routes.modifica', id=prodotto.id) }}"
+                     class="btn-ghost"
+                     style="padding:6px 12px; font-size:12px; margin-right:4px; border-color:#fde68a; color:#b45309;">
+                    ✏️ Modifica
+                  </a>
+                  <form method="POST"
+                        action="{{ url_for('routes.elimina', id=prodotto.id) }}"
+                        style="display:inline;"
+                        data-confirm="Eliminare il prodotto «{{ prodotto.nome }}»?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-danger-soft" style="padding:6px 12px; font-size:12px;">
+                      🗑 Elimina
+                    </button>
+                  </form>
+                </td>
+              </tr>
+
+              {% else %}
+
+              <!-- Empty state -->
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <span class="empty-icon">
+                      {% if q %}🔍{% else %}📦{% endif %}
+                    </span>
+                    <h4>
+                      {% if q %}
+                        Nessun prodotto trovato per "{{ q }}"
+                      {% else %}
+                        Nessun prodotto in magazzino
+                      {% endif %}
+                    </h4>
+                    <p>
+                      {% if q %}
+                        Prova con un termine diverso o
+                        <a href="{{ url_for('routes.index') }}" style="color:var(--brand-primary);">torna all'inventario</a>.
+                      {% else %}
+                        Inizia aggiungendo il tuo primo prodotto.
+                      {% endif %}
+                    </p>
+                    {% if not q %}
+                    <a href="{{ url_for('routes.aggiungi') }}" class="btn-brand">
+                      ➕ Aggiungi Prodotto
+                    </a>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+
+              {% endfor %}
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+    {% include 'footer.html' %}
+  </div><!-- /main-content -->
+
+</div><!-- /app-shell -->
+
+
+
+<script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</body>
+</html>

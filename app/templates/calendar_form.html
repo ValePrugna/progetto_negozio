@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Modifica' if entry else 'Nuovo' }} impegno — Gestionale Negozio{% endblock %}
+{% block heading %}{{ 'Modifica' if entry else 'Nuovo' }} impegno{% endblock %}
+{% block subtitle %}Turni dei volontari ed eventi particolari · Orari di Roma{% endblock %}
+{% block actions %}<a class="btn-ghost" href="{{ url_for('calendar.index') }}">← Calendario</a>{% endblock %}
+{% block content %}<section class="card-custom calendar-form-card">
+<form method="POST" class="form-custom" novalidate>{{ form.hidden_tag() }}
+{% for field in [form.tipo, form.titolo, form.volontario_id, form.inizio, form.fine, form.luogo, form.note] %}<div class="form-group">{{ field.label }}{{ field() }}{% for error in field.errors %}<p class="form-error" role="alert">{{ error }}</p>{% endfor %}</div>{% endfor %}
+<p class="form-hint">Per un turno scegli un volontario. Per un evento il volontario non viene assegnato. La fine deve essere successiva all’inizio; sono ammessi impegni su più giorni.</p>
+{% if form.volontario_id.choices|length == 1 %}<p class="alert-custom alert-info">Non ci sono volontari attivi. <a href="{{ url_for('calendar.volunteers') }}">Aggiungi un volontario</a> prima di inserire un turno.</p>{% endif %}
+<div class="calendar-actions"><button class="btn-brand" type="submit">Salva impegno</button><a class="btn-ghost" href="{{ url_for('calendar.index') }}">Annulla</a></div></form>
+{% if entry %}<form method="POST" action="{{ url_for('calendar.delete', entry_id=entry.id) }}" data-confirm="Eliminare questo impegno?" class="calendar-delete"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn-danger-soft" type="submit">Elimina impegno</button></form>{% endif %}</section>{% endblock %}

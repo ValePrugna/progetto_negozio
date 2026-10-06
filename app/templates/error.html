@@ -1,0 +1,4 @@
+<!DOCTYPE html>
+<html lang="it"><head>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ title }} — Gestionale Negozio</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body><main class="auth-page"><div class="auth-card"><h1>{{ code }} · {{ title }}</h1><p>{{ message }}</p><a class="btn-brand" href="{{ url_for('auth.login') }}">Torna al gestionale</a></div></main></body></html>
